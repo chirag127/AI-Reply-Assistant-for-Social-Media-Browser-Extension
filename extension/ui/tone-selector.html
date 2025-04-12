@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,41 +10,48 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
       margin: 0;
       padding: 0;
-      background-color: transparent;
+      background-color: white;
     }
-    
+
     .tone-selector-container {
-      width: 200px;
+      width: 220px;
       background-color: white;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
       padding: 12px;
     }
-    
+
     .tone-selector-title {
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       color: #333;
+      font-size: 16px;
     }
-    
+
     .tone-button {
       display: block;
       width: 100%;
       text-align: left;
-      padding: 8px;
-      margin: 4px 0;
+      padding: 10px;
+      margin: 6px 0;
       border: none;
       background-color: #f0f0f0;
       border-radius: 4px;
       cursor: pointer;
       transition: background-color 0.2s;
+      font-size: 14px;
     }
-    
+
     .tone-button:hover {
       background-color: #e0e0e0;
     }
+
+    .tone-button:active {
+      background-color: #d0d0d0;
+    }
   </style>
 </head>
+
 <body>
   <div class="tone-selector-container">
     <div class="tone-selector-title">Select Tone:</div>
@@ -53,17 +61,23 @@
     <button class="tone-button" data-tone="Supportive">Supportive</button>
     <button class="tone-button" data-tone="Sarcastic">Sarcastic</button>
   </div>
-  
+
   <script>
-    // This script will be replaced by the content script
-    // It's here for reference only
+    // Add click event listeners to tone buttons
     document.querySelectorAll('.tone-button').forEach(button => {
       button.addEventListener('click', () => {
         const tone = button.getAttribute('data-tone');
+        console.log('Tone selected:', tone);
         // Send message to parent
         window.parent.postMessage({ action: 'toneSelected', tone }, '*');
       });
     });
+
+    // Log when the page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Tone selector loaded');
+    });
   </script>
 </body>
+
 </html>

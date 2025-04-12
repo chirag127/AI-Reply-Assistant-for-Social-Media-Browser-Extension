@@ -6,7 +6,7 @@ const config = require('../config/env');
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
 // Get the Gemini model (using Flash Lite for quick responses)
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
 /**
  * Generate reply suggestions using Gemini API
@@ -18,24 +18,24 @@ async function generateReplySuggestions(prompt, numSuggestions = 3) {
   try {
     // Generate multiple suggestions
     const suggestions = [];
-    
+
     // Generate each suggestion separately to ensure diversity
     for (let i = 0; i < numSuggestions; i++) {
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text().trim();
-      
+
       // Add to suggestions if not empty and not a duplicate
       if (text && !suggestions.includes(text)) {
         suggestions.push(text);
       }
     }
-    
+
     // If we couldn't generate enough unique suggestions, fill with defaults
     while (suggestions.length < numSuggestions) {
       suggestions.push(`I appreciate your perspective. Thanks for sharing!`);
     }
-    
+
     return suggestions;
   } catch (error) {
     console.error('Error generating reply with Gemini:', error);
