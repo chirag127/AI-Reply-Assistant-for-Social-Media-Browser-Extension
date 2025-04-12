@@ -205,47 +205,91 @@
     }
 
     // Display reply suggestions
-    function displaySuggestions(suggestions, container) {
-        container.innerHTML = "";
-
-        // Add title
-        const title = document.createElement("div");
-        title.textContent = "Suggested Replies:";
-        title.style.cssText = `
-      font-weight: bold;
-      margin-bottom: 8px;
-      color: #333;
-    `;
-        container.appendChild(title);
+    function displaySuggestions(suggestions, iframe) {
+        // Create HTML content for suggestions
+        let suggestionsHtml = `
+            <html>
+                <head>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            margin: 0;
+                            padding: 15px;
+                            background-color: white;
+                        }
+                        .title {
+                            font-weight: bold;
+                            margin-bottom: 12px;
+                            color: #333;
+                            font-size: 16px;
+                        }
+                        .suggestion {
+                            padding: 10px;
+                            margin: 8px 0;
+                            background-color: #f8f8f8;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            border: 1px solid #e1e8ed;
+                            transition: background-color 0.2s;
+                        }
+                        .suggestion:hover {
+                            background-color: #e8f5fd;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="title">Suggested Replies:</div>
+        `;
 
         // Add each suggestion
-        suggestions.forEach((suggestion) => {
-            const suggestionElement = document.createElement("div");
-            suggestionElement.textContent = suggestion;
-            suggestionElement.style.cssText = `
-        padding: 8px;
-        margin: 4px 0;
-        background-color: #f8f8f8;
-        border-radius: 4px;
-        cursor: pointer;
-        border: 1px solid #e1e8ed;
-      `;
-
-            suggestionElement.addEventListener("mouseover", () => {
-                suggestionElement.style.backgroundColor = "#e8f5fd";
-            });
-
-            suggestionElement.addEventListener("mouseout", () => {
-                suggestionElement.style.backgroundColor = "#f8f8f8";
-            });
-
-            suggestionElement.addEventListener("click", () => {
-                pasteReplyToReddit(suggestion);
-                container.remove();
-            });
-
-            container.appendChild(suggestionElement);
+        suggestions.forEach((suggestion, index) => {
+            suggestionsHtml += `
+                <div class="suggestion" data-index="${index}">${suggestion}</div>
+            `;
         });
+
+        // Close the HTML
+        suggestionsHtml += `
+                    <script>
+                        // Add click event listeners to suggestions
+                        document.querySelectorAll('.suggestion').forEach(element => {
+                            element.addEventListener('click', () => {
+                                const suggestion = element.textContent;
+                                window.parent.postMessage({
+                                    action: 'suggestionSelected',
+                                    suggestion
+                                }, '*');
+                            });
+                        });
+                    </script>
+                </body>
+            </html>
+        `;
+
+        // Write the HTML to the iframe
+        if (iframe.contentWindow) {
+            iframe.contentWindow.document.open();
+            iframe.contentWindow.document.write(suggestionsHtml);
+            iframe.contentWindow.document.close();
+
+            // Add message listener for suggestion selection
+            window.addEventListener(
+                "message",
+                function handleSuggestionSelection(event) {
+                    if (
+                        event.source === iframe.contentWindow &&
+                        event.data.action === "suggestionSelected"
+                    ) {
+                        pasteReplyToReddit(event.data.suggestion);
+                        iframe.remove();
+                        window.removeEventListener(
+                            "message",
+                            handleSuggestionSelection
+                        );
+                    }
+                }
+            );
+        }
     }
 
     // Paste the selected reply into Reddit's reply box
