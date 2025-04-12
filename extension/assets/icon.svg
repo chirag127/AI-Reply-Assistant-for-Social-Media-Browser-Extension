@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="60" fill="#1DA1F2" />
+  
+  <!-- Chat Bubble -->
+  <path d="M94 42H34C30.6863 42 28 44.6863 28 48V80C28 83.3137 30.6863 86 34 86H50L64 100L78 86H94C97.3137 86 100 83.3137 100 80V48C100 44.6863 97.3137 42 94 42Z" fill="white" />
+  
+  <!-- AI Text -->
+  <text x="64" y="70" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#1DA1F2">AI</text>
+</svg>

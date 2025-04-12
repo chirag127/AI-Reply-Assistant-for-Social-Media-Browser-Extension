@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "AI Reply Assistant",
+  "version": "1.0.0",
+  "description": "Generate smart, context-aware, tone-adjusted replies to comments/posts on social media platforms",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.twitter.com/*",
+    "https://*.linkedin.com/*",
+    "https://*.reddit.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.twitter.com/*"],
+      "js": ["content-scripts/twitter.js"]
+    },
+    {
+      "matches": ["https://*.linkedin.com/*"],
+      "js": ["content-scripts/linkedin.js"]
+    },
+    {
+      "matches": ["https://*.reddit.com/*"],
+      "js": ["content-scripts/reddit.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "ui/popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}
