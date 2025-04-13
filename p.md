@@ -66,7 +66,7 @@ ai-reply-assistant/
 ├── extension/
 │   ├── assets/                   # Icons, logos
 │   ├── content-scripts/         # Per-platform injection logic
-│   │   ├── twitter.js
+│   │   ├── x.js
 │   │   ├── linkedin.js
 │   │   └── reddit.js
 │   ├── ui/
@@ -78,7 +78,8 @@ ai-reply-assistant/
 │   │   └── popup.js             # Handles tone selection + reply rendering
 │   ├── manifest.json
 │   └── background.js            # Message handling, context bridge
-│
+│make the Project Structure as modular as possible.
+
 ├── backend/
 │   ├── routes/
 │   │   └── generateReply.js     # Handles AI reply generation
@@ -90,7 +91,8 @@ ai-reply-assistant/
 │   │   └── env.js               # API keys, environment vars
 │   ├── app.js                   # Express app entry
 │   └── package.json
-│
+│make the Project Structure as modular as possible.
+
 └── README.md
 ```
 
