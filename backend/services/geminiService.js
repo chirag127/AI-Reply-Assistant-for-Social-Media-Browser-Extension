@@ -11,6 +11,10 @@ const config = require("../config/env");
  */
 async function generateReplySuggestions(prompt) {
     try {
+
+        console.log("Generating reply suggestions with Gemini...");
+        console.log("Prompt:", prompt);
+
         // Initialize the Gemini API client
         const ai = new GoogleGenAI({
             apiKey: config.geminiApiKey,

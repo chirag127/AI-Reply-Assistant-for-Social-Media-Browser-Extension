@@ -12,6 +12,39 @@
         "Supportive",
         "Sarcastic",
     ];
+    let isEnabled = true; // Default to enabled
+
+    // Load initial state
+    chrome.storage.local.get(["twitterEnabled"], (result) => {
+        isEnabled = result.twitterEnabled !== false;
+        if (isEnabled) {
+            init();
+        } else {
+            // Remove any existing buttons if the platform is disabled
+            removeExistingButtons();
+        }
+    });
+
+    // Listen for state changes
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (
+            message.action === "updatePlatformState" &&
+            message.platform === "twitter"
+        ) {
+            isEnabled = message.enabled;
+            if (isEnabled) {
+                init();
+            } else {
+                removeExistingButtons();
+            }
+        }
+    });
+
+    // Remove all AI Reply buttons
+    function removeExistingButtons() {
+        const buttons = document.querySelectorAll(`.${BUTTON_CLASS}`);
+        buttons.forEach((button) => button.remove());
+    }
 
     // Main initialization
     function init() {
@@ -26,6 +59,9 @@
 
     // Create and inject the AI Reply button
     function createReplyButton() {
+        // Don't create button if platform is disabled
+        if (!isEnabled) return null;
+
         const button = document.createElement("button");
         button.className = BUTTON_CLASS;
         button.innerHTML = "💬 AI Reply";
@@ -67,6 +103,7 @@
 
         // Create and append the button
         const button = createReplyButton();
+        if (!button) return; // Don't inject if button creation failed
         actionsContainer.appendChild(button);
 
         // Add click event listener
@@ -348,8 +385,14 @@
 
     // Initialize when the DOM is fully loaded
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
+        document.addEventListener("DOMContentLoaded", () => {
+            if (isEnabled) {
+                init();
+            }
+        });
     } else {
-        init();
+        if (isEnabled) {
+            init();
+        }
     }
 })();

@@ -1,9 +1,27 @@
 // AI Reply Assistant - Popup Script
 
 // Configuration
-// In production, this should be updated to the deployed backend URL with HTTPS
 const API_BASE_URL = "http://localhost:3000";
 let HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
+
+// Platform configuration
+const PLATFORMS = {
+    twitter: {
+        id: "twitter-toggle",
+        storageKey: "twitterEnabled",
+        pattern: "https://*.x.com/*",
+    },
+    linkedin: {
+        id: "linkedin-toggle",
+        storageKey: "linkedinEnabled",
+        pattern: "https://*.linkedin.com/*",
+    },
+    reddit: {
+        id: "reddit-toggle",
+        storageKey: "redditEnabled",
+        pattern: "https://*.reddit.com/*",
+    },
+};
 
 // Initialize when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
@@ -20,47 +38,53 @@ document.addEventListener("DOMContentLoaded", () => {
     updateVersionDisplay();
 });
 
-// Update the extension status indicator
-function updateExtensionStatus() {
-    const statusIndicator = document.querySelector(".status-indicator");
-    const statusText = document.querySelector(".status-section p");
-
-    // Check if the backend is reachable
-    checkBackendStatus()
-        .then((isActive) => {
-            if (isActive) {
-                statusIndicator.classList.add("active");
-                statusIndicator.classList.remove("inactive");
-                statusText.textContent = "Extension is active";
-            } else {
-                statusIndicator.classList.remove("active");
-                statusIndicator.classList.add("inactive");
-                statusText.textContent = "Backend is not reachable";
-            }
-        })
-        .catch(() => {
-            statusIndicator.classList.remove("active");
-            statusIndicator.classList.add("inactive");
-            statusText.textContent = "Error checking status";
-        });
-}
-
 // Load settings from storage
 function loadSettings() {
-    chrome.storage.local.get(["apiBaseUrl"], (result) => {
-        if (result.apiBaseUrl) {
-            // If a custom API base URL is set, use it
-            const customApiBaseUrl = result.apiBaseUrl;
-            HEALTH_ENDPOINT = `${customApiBaseUrl}/health`;
-            console.log(`Using custom API endpoint: ${HEALTH_ENDPOINT}`);
+    chrome.storage.local.get(
+        ["apiBaseUrl", ...Object.values(PLATFORMS).map((p) => p.storageKey)],
+        (result) => {
+            if (result.apiBaseUrl) {
+                // If a custom API base URL is set, use it
+                const customApiBaseUrl = result.apiBaseUrl;
+                HEALTH_ENDPOINT = `${customApiBaseUrl}/health`;
+                console.log(`Using custom API endpoint: ${HEALTH_ENDPOINT}`);
+            }
+
+            // Set toggle states
+            Object.values(PLATFORMS).forEach((platform) => {
+                const toggle = document.getElementById(platform.id);
+                if (toggle) {
+                    // Default to enabled if not set
+                    toggle.checked = result[platform.storageKey] !== false;
+                }
+            });
         }
-    });
+    );
+}
+
+// Save platform state
+function savePlatformState(platformKey, enabled) {
+    const platform = PLATFORMS[platformKey];
+    if (platform) {
+        chrome.storage.local.set({ [platform.storageKey]: enabled }, () => {
+            console.log(`${platformKey} ${enabled ? "enabled" : "disabled"}`);
+            // Notify content scripts of the change
+            chrome.tabs.query({ url: platform.pattern }, (tabs) => {
+                tabs.forEach((tab) => {
+                    chrome.tabs.sendMessage(tab.id, {
+                        action: "updatePlatformState",
+                        platform: platformKey,
+                        enabled: enabled,
+                    });
+                });
+            });
+        });
+    }
 }
 
 // Check if the backend API is reachable
 async function checkBackendStatus() {
     try {
-        // Use the health endpoint to check if the backend is reachable
         const response = await fetch(HEALTH_ENDPOINT, {
             method: "GET",
             headers: {
@@ -77,12 +101,62 @@ async function checkBackendStatus() {
 
 // Set up event listeners
 function setupEventListeners() {
+    // Add change event listeners to platform toggles
+    Object.entries(PLATFORMS).forEach(([key, platform]) => {
+        const toggle = document.getElementById(platform.id);
+        if (toggle) {
+            toggle.addEventListener("change", (e) => {
+                savePlatformState(key, e.target.checked);
+            });
+        }
+    });
+
     // Example: Add click event to the status section to refresh status
     document.querySelector(".status-section").addEventListener("click", () => {
         updateExtensionStatus();
     });
+}
 
-    // You can add more event listeners here as needed
+// Update the extension status indicator
+function updateExtensionStatus() {
+    const statusIndicator = document.querySelector(".status-indicator");
+    const statusText = document.querySelector(".status-section p");
+
+    // Check if any platform is enabled
+    chrome.storage.local.get(
+        Object.values(PLATFORMS).map((p) => p.storageKey),
+        (result) => {
+            const anyEnabled = Object.values(PLATFORMS).some(
+                (platform) => result[platform.storageKey] !== false
+            );
+
+            if (!anyEnabled) {
+                statusIndicator.classList.remove("active");
+                statusIndicator.classList.add("inactive");
+                statusText.textContent = "Extension disabled for all platforms";
+                return;
+            }
+
+            // Check if the backend is reachable
+            checkBackendStatus()
+                .then((isActive) => {
+                    if (isActive) {
+                        statusIndicator.classList.add("active");
+                        statusIndicator.classList.remove("inactive");
+                        statusText.textContent = "Extension is active";
+                    } else {
+                        statusIndicator.classList.remove("active");
+                        statusIndicator.classList.add("inactive");
+                        statusText.textContent = "Backend is not reachable";
+                    }
+                })
+                .catch(() => {
+                    statusIndicator.classList.remove("active");
+                    statusIndicator.classList.add("inactive");
+                    statusText.textContent = "Error checking status";
+                });
+        }
+    );
 }
 
 // Get the current version from the manifest
