@@ -90,86 +90,107 @@
 
     // Handle AI Reply button click
     function handleButtonClick(button, postText) {
-        // Create an iframe for the tone selector
-        const iframe = document.createElement("iframe");
-        iframe.className = "ai-reply-tone-selector-iframe";
-        iframe.src = chrome.runtime.getURL("ui/tone-selector.html");
-        iframe.style.cssText = `
-      position: absolute;
-      border: none;
-      width: 250px;
-      height: 280px;
-      z-index: 9999;
-      background: transparent;
-    `;
+        console.log("AI Reply button clicked for Twitter");
 
-        // Position the iframe near the button
+        // Instead of using an iframe, let's create the tone selector directly in the DOM
+        const toneSelector = document.createElement("div");
+        toneSelector.className = "ai-reply-tone-selector";
+        toneSelector.style.cssText = `
+            position: absolute;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            width: 220px;
+            z-index: 9999;
+        `;
+
+        // Position the tone selector near the button
         const buttonRect = button.getBoundingClientRect();
-        iframe.style.left = `${buttonRect.left}px`;
-        iframe.style.top = `${buttonRect.bottom + 5}px`;
+        toneSelector.style.left = `${buttonRect.left}px`;
+        toneSelector.style.top = `${buttonRect.bottom + 5}px`;
+
+        // Add title
+        const title = document.createElement("div");
+        title.textContent = "Select Tone:";
+        title.style.cssText = `
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 16px;
+        `;
+        toneSelector.appendChild(title);
+
+        // Add tone buttons
+        const tones = [
+            "Friendly",
+            "Professional",
+            "Witty",
+            "Supportive",
+            "Sarcastic",
+        ];
+        tones.forEach((tone) => {
+            const toneButton = document.createElement("button");
+            toneButton.textContent = tone;
+            toneButton.style.cssText = `
+                display: block;
+                width: 100%;
+                text-align: left;
+                padding: 10px;
+                margin: 6px 0;
+                border: none;
+                background-color: #f0f0f0;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+                font-size: 14px;
+            `;
+
+            toneButton.addEventListener("mouseover", () => {
+                toneButton.style.backgroundColor = "#e0e0e0";
+            });
+
+            toneButton.addEventListener("mouseout", () => {
+                toneButton.style.backgroundColor = "#f0f0f0";
+            });
+
+            toneButton.addEventListener("click", () => {
+                console.log(`Selected tone: ${tone} for platform: ${PLATFORM}`);
+                generateReply(postText, PLATFORM, tone, toneSelector);
+            });
+
+            toneSelector.appendChild(toneButton);
+        });
 
         // Add to DOM
-        document.body.appendChild(iframe);
-
-        // Store the post text and iframe for later use
-        const postData = {
-            postText,
-            iframe,
-            platform: PLATFORM,
-        };
-
-        // Listen for messages from the iframe
-        window.addEventListener("message", function handleToneSelection(event) {
-            // Check if the message is from our iframe
-            if (event.source === iframe.contentWindow) {
-                const { action, tone } = event.data;
-
-                if (action === "toneSelected") {
-                    console.log(
-                        `Selected tone: ${tone} for platform: ${PLATFORM}`
-                    );
-                    // Generate reply with the selected tone
-                    generateReply(
-                        postData.postText,
-                        postData.platform,
-                        tone,
-                        iframe
-                    );
-                    // Remove the event listener
-                    window.removeEventListener("message", handleToneSelection);
-                }
-            }
-        });
+        document.body.appendChild(toneSelector);
 
         // Close when clicking outside
         document.addEventListener("click", function closeSelector(e) {
-            if (e.target !== button && !iframe.contains(e.target)) {
-                iframe.remove();
+            if (e.target !== button && !toneSelector.contains(e.target)) {
+                toneSelector.remove();
                 document.removeEventListener("click", closeSelector);
             }
         });
     }
 
     // Generate reply using the background script
-    function generateReply(postText, platform, tone, iframe) {
+    function generateReply(postText, platform, tone, container) {
         console.log(`Generating reply for: ${platform} with tone: ${tone}`);
 
-        // Create a loading message in the iframe
-        const loadingMessage = `
-            <html>
-                <body style="font-family: sans-serif; padding: 20px; text-align: center;">
-                    <div>Generating replies...</div>
-                    <div style="margin-top: 10px;">Please wait...</div>
-                </body>
-            </html>
+        // Show loading message
+        container.innerHTML = "";
+        const loadingDiv = document.createElement("div");
+        loadingDiv.style.cssText = `
+            text-align: center;
+            padding: 20px;
+            font-family: sans-serif;
         `;
-
-        // Set the loading message
-        if (iframe.contentWindow) {
-            iframe.contentWindow.document.open();
-            iframe.contentWindow.document.write(loadingMessage);
-            iframe.contentWindow.document.close();
-        }
+        loadingDiv.innerHTML = `
+            <div>Generating replies...</div>
+            <div style="margin-top: 10px;">Please wait...</div>
+        `;
+        container.appendChild(loadingDiv);
 
         // Send message to background script
         chrome.runtime.sendMessage(
@@ -181,117 +202,70 @@
             },
             (response) => {
                 if (response && response.success) {
-                    displaySuggestions(response.suggestions, iframe);
+                    displaySuggestions(response.suggestions, container);
                 } else {
-                    const errorMessage = `
-                        <html>
-                            <body style="font-family: sans-serif; padding: 20px; text-align: center;">
-                                <div style="color: red;">
-                                    Error: ${
-                                        (response && response.error) ||
-                                        "Failed to generate replies"
-                                    }
-                                </div>
-                            </body>
-                        </html>
+                    container.innerHTML = "";
+                    const errorDiv = document.createElement("div");
+                    errorDiv.style.cssText = `
+                        color: red;
+                        padding: 10px;
+                        text-align: center;
                     `;
-
-                    if (iframe.contentWindow) {
-                        iframe.contentWindow.document.open();
-                        iframe.contentWindow.document.write(errorMessage);
-                        iframe.contentWindow.document.close();
-                    }
+                    errorDiv.textContent = `Error: ${
+                        (response && response.error) ||
+                        "Failed to generate replies"
+                    }`;
+                    container.appendChild(errorDiv);
                 }
             }
         );
     }
 
     // Display reply suggestions
-    function displaySuggestions(suggestions, iframe) {
-        // Create HTML content for suggestions
-        let suggestionsHtml = `
-            <html>
-                <head>
-                    <style>
-                        body {
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                            margin: 0;
-                            padding: 15px;
-                            background-color: white;
-                        }
-                        .title {
-                            font-weight: bold;
-                            margin-bottom: 12px;
-                            color: #333;
-                            font-size: 16px;
-                        }
-                        .suggestion {
-                            padding: 10px;
-                            margin: 8px 0;
-                            background-color: #f8f8f8;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            border: 1px solid #e1e8ed;
-                            transition: background-color 0.2s;
-                        }
-                        .suggestion:hover {
-                            background-color: #e8f5fd;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="title">Suggested Replies:</div>
+    function displaySuggestions(suggestions, container) {
+        // Clear the container
+        container.innerHTML = "";
+
+        // Add title
+        const title = document.createElement("div");
+        title.textContent = "Suggested Replies:";
+        title.style.cssText = `
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 16px;
         `;
+        container.appendChild(title);
 
         // Add each suggestion
         suggestions.forEach((suggestion, index) => {
-            suggestionsHtml += `
-                <div class="suggestion" data-index="${index}">${suggestion}</div>
+            const suggestionElement = document.createElement("div");
+            suggestionElement.textContent = suggestion;
+            suggestionElement.style.cssText = `
+                padding: 10px;
+                margin: 8px 0;
+                background-color: #f8f8f8;
+                border-radius: 4px;
+                cursor: pointer;
+                border: 1px solid #e1e8ed;
+                transition: background-color 0.2s;
             `;
+
+            suggestionElement.addEventListener("mouseover", () => {
+                suggestionElement.style.backgroundColor = "#e8f5fd";
+            });
+
+            suggestionElement.addEventListener("mouseout", () => {
+                suggestionElement.style.backgroundColor = "#f8f8f8";
+            });
+
+            suggestionElement.addEventListener("click", () => {
+                pasteReplyToTwitter(suggestion);
+                container.remove();
+            });
+
+            container.appendChild(suggestionElement);
         });
-
-        // Close the HTML
-        suggestionsHtml += `
-                    <script>
-                        // Add click event listeners to suggestions
-                        document.querySelectorAll('.suggestion').forEach(element => {
-                            element.addEventListener('click', () => {
-                                const suggestion = element.textContent;
-                                window.parent.postMessage({
-                                    action: 'suggestionSelected',
-                                    suggestion
-                                }, '*');
-                            });
-                        });
-                    </script>
-                </body>
-            </html>
-        `;
-
-        // Write the HTML to the iframe
-        if (iframe.contentWindow) {
-            iframe.contentWindow.document.open();
-            iframe.contentWindow.document.write(suggestionsHtml);
-            iframe.contentWindow.document.close();
-
-            // Add message listener for suggestion selection
-            window.addEventListener(
-                "message",
-                function handleSuggestionSelection(event) {
-                    if (
-                        event.source === iframe.contentWindow &&
-                        event.data.action === "suggestionSelected"
-                    ) {
-                        pasteReplyToTwitter(event.data.suggestion);
-                        iframe.remove();
-                        window.removeEventListener(
-                            "message",
-                            handleSuggestionSelection
-                        );
-                    }
-                }
-            );
-        }
     }
 
     // Paste the selected reply into Twitter's reply box
